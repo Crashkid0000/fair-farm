@@ -1,0 +1,244 @@
+-- Elevate | By: crashkid0000 | Version: Finalized Setup
+
+-- ⛓️ Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- 🌐 Events
+local PunchEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Punch")
+local ApplyStats = ReplicatedStorage:WaitForChild("Events"):WaitForChild("ApplyStats")
+
+-- 🧠 Rayfield UI Loader
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+-- 📍 LocationMap met vaste coördinaten voor Puncher en Tanks 1 t/m 29
+local LocationMap = {
+   ["Puncher"] = Vector3.new(261.00, 99.18, -4648.00),
+    ["Tank 1"] = Vector3.new(266.00, 99.17, -4648.00),
+    ["Tank 2"] = Vector3.new(265.76, 99.13, -4646.45),
+    ["Tank 3"] = Vector3.new(265.05, 99.20, -4645.06),
+    ["Tank 4"] = Vector3.new(263.94, 99.06, -4643.95),
+    ["Tank 5"] = Vector3.new(262.55, 99.16, -4643.24),
+    ["Tank 6"] = Vector3.new(261.00, 99.19, -4643.00),
+    ["Tank 7"] = Vector3.new(259.45, 99.17, -4643.24),
+    ["Tank 8"] = Vector3.new(258.06, 99.18, -4643.95),
+    ["Tank 9"] = Vector3.new(256.95, 99.20, -4645.06),
+    ["Tank 10"] = Vector3.new(256.24, 99.18, -4646.45),
+    ["Tank 11"] = Vector3.new(256.00, 99.20, -4648.00),
+    ["Tank 12"] = Vector3.new(256.24, 99.20, -4649.55),
+    ["Tank 13"] = Vector3.new(256.95, 99.18, -4650.94),
+    ["Tank 14"] = Vector3.new(258.06, 99.20, -4652.05),
+    ["Tank 15"] = Vector3.new(259.45, 99.20, -4652.76),
+    ["Tank 16"] = Vector3.new(261.00, 99.18, -4653.00),
+    ["Tank 17"] = Vector3.new(262.55, 99.12, -4652.76),
+    ["Tank 18"] = Vector3.new(263.94, 99.19, -4652.05),
+    ["Tank 19"] = Vector3.new(265.05, 99.19, -4650.94),
+    ["Tank 20"] = Vector3.new(265.76, 99.16, -4649.55),
+}
+
+-- 👣 Configuratie
+local selectedTeleportName = "Puncher"
+local loopTeleport = false
+local autoRapidPunch = false
+local punchCount = 150
+local punchDelay = 14 -- standaard 14 seconden delay
+local noGravity = false
+
+-- 🌍 Loop Teleport Logic
+spawn(function()
+    while task.wait(0.1) do
+        if loopTeleport and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local pos = LocationMap[selectedTeleportName]
+            if pos then
+                LocalPlayer.Character:PivotTo(CFrame.new(pos))
+            end
+        end
+    end
+end)
+
+-- 🥊 Auto Punch Logic
+spawn(function()
+    while task.wait(punchDelay) do
+        if autoRapidPunch then
+            for i = 1, punchCount do
+                task.spawn(function()
+                    local args = {[1] = 0.5, [2] = 0.1, [3] = 1}
+                    PunchEvent:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+end)
+
+-- 🌌 No Gravity Toggle
+workspace:GetPropertyChangedSignal("Gravity"):Connect(function()
+    if noGravity then
+        workspace.Gravity = 0
+    end
+end)
+
+-- 🔔 Notification Loop
+spawn(function()
+    while true do
+        task.wait(180)
+        Rayfield:Notify({
+            Title = "❤️ Love the script?",
+            Content = "Thank the creator: crashkid0000",
+            Duration = 6
+        })
+    end
+end)
+
+-- 🌐 Webhook (OPTIONEEL AANPASSEN)
+local WebhookURL = "https://discord.com/api/webhooks/1397237052591837386/5bt6bLt1rvI9FluGrMcaCFlKaJDJVHAvJQARf5AB_ZczGfvBKrP1hLz2eghbD6256tyx"
+ApplyStats.OnClientEvent:Connect(function(data)
+    local level = data.level or 0
+    local content = string.format('{"username": "Logger", "content": "%s - Level: %d"}', LocalPlayer.Name, level)
+
+    if syn and syn.request then
+        syn.request({
+            Url = WebhookURL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = content
+        })
+    end
+end)
+
+-- 🧩 GUI SETUP
+local Window = Rayfield:CreateWindow({
+    Name = "Fair farm | By: crashkid0000",
+    LoadingTitle = "Keep gooning during loading screen",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "Fair farm"
+    }
+})
+
+local MainTab = Window:CreateTab("Main", 4483362458)
+
+-- 🔽 Teleport dropdown bovenaan met alle tanks en puncher
+local dropdownOptions = {"Puncher"}
+for i = 1, 29 do
+    table.insert(dropdownOptions, "Tank " .. i)
+end
+
+local Dropdown = MainTab:CreateDropdown({
+    Name = "Teleport Location",
+    Options = dropdownOptions,
+    CurrentOption = {"Puncher"},
+    MultipleOptions = false,
+    Flag = "TeleportDropdown",
+    Callback = function(Options)
+        local selectedOption = Options[1] -- Aangenomen dat er slechts één optie is geselecteerd
+        if selectedOption then
+            selectedTeleportName = selectedOption
+            local pos = LocationMap[selectedTeleportName]
+            if pos and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character:PivotTo(CFrame.new(pos))
+            end
+        end
+    end,
+})
+
+-- 🧠 Loop Teleport
+MainTab:CreateToggle({
+    Name = "Loop Teleport",
+    CurrentValue = false,
+    Flag = "LoopTeleportToggle",
+    Callback = function(Value)
+        loopTeleport = Value
+    end
+})
+
+-- 🔁 Auto Punch
+MainTab:CreateToggle({
+    Name = "Auto Rapid Punch",
+    CurrentValue = false,
+    Flag = "AutoPunchToggle",
+    Callback = function(Value)
+        autoRapidPunch = Value
+    end
+})
+
+-- ✏️ Punch Count
+MainTab:CreateInput({
+    Name = "Punch Count",
+    PlaceholderText = "150",
+    CurrentValue = tostring(punchCount),
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num and num > 0 then
+            punchCount = num
+        end
+    end
+})
+
+-- 🕓 Delay
+MainTab:CreateInput({
+    Name = "Auto Punch Delay (sec)",
+    PlaceholderText = "14",
+    CurrentValue = tostring(punchDelay),
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        local num = tonumber(Value)
+        if num and num >= 0 then
+            punchDelay = num
+        end
+    end
+})
+
+-- 🌙 Gravity Toggle
+MainTab:CreateToggle({
+    Name = "No Gravity",
+    CurrentValue = false,
+    Flag = "NoGravityToggle",
+    Callback = function(Value)
+        noGravity = Value
+        if Value then
+            workspace.Gravity = 0
+        else
+            workspace.Gravity = 196.2
+        end
+    end
+})
+
+-- ⛔ Anti Idle
+MainTab:CreateButton({
+    Name = "Anti-Idle UI",
+    Callback = function()
+        if game.CoreGui:FindFirstChild("AntiIdleUI") then
+            game.CoreGui:FindFirstChild("AntiIdleUI"):Destroy()
+        end
+
+        local ScreenGui = Instance.new("ScreenGui")
+        local Frame = Instance.new("Frame")
+        local Label = Instance.new("TextLabel")
+
+        ScreenGui.Name = "AntiIdleUI"
+        ScreenGui.Parent = game.CoreGui
+
+        Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        Frame.BorderSizePixel = 0
+        Frame.Position = UDim2.new(0.1, 0, 0.1, 0)
+        Frame.Size = UDim2.new(0, 180, 0, 50)
+        Frame.Active = true
+        Frame.Draggable = true
+        Frame.Parent = ScreenGui
+
+        Label.Size = UDim2.new(1, 0, 1, 0)
+        Label.BackgroundTransparency = 1
+        Label.TextColor3 = Color3.new(1, 1, 1)
+        Label.Text = "Anti-Idle Enabled"
+        Label.Font = Enum.Font.SourceSansBold
+        Label.Parent = Frame
+    end
+})
+
+-- Laad de configuratie (Zorg dat dit onderaan staat)
+Rayfield:LoadConfiguration()
